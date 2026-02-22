@@ -11,10 +11,17 @@ import (
 )
 
 func main() {
-	ebiten.SetWindowTitle("Mokosh Garden")
-	ebiten.SetWindowSize(game.DefaultWidth*2, game.DefaultHeight*2)
+	g, err := game.New()
+	if err != nil {
+		log.Fatal(err)
+	}
 
-	if err := ebiten.RunGame(game.New()); err != nil {
+	width, height := g.Size()
+
+	ebiten.SetWindowTitle("Mokosh Garden")
+	ebiten.SetWindowSize(width*2, height*2)
+
+	if err := ebiten.RunGame(g); err != nil {
 		log.Fatal(err)
 	}
 }
