@@ -11,7 +11,7 @@ import (
 )
 
 func main() {
-	g, err := game.New()
+	g, err := game.New(assets)
 	if err != nil {
 		log.Fatal(err)
 	}
