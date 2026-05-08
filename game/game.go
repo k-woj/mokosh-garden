@@ -60,6 +60,8 @@ type Game struct {
 	pickerUnlocked            bool
 	holdPlant                 *Plant
 	holdTicks                 int
+	activeTouchID             ebiten.TouchID
+	lastTouchX, lastTouchY   int
 }
 
 func New(fsys fs.FS) (*Game, error) {
@@ -191,6 +193,7 @@ func New(fsys fs.FS) (*Game, error) {
 		plants:          plants,
 		honeyMilestones: []float64{50, 200, 1000},
 		picker:          newPlantPicker(),
+		activeTouchID:   -1,
 		visitors:        visitors,
 		achievements:    makeAchievements(visitors),
 	}, nil
@@ -288,13 +291,43 @@ func (g *Game) Update() error {
 		}
 	}
 
-	mx, my := ebiten.CursorPosition()
+	// Unified pointer input: first touch takes priority over mouse.
+	var pJustPressed, pIsHeld, pJustReleased bool
+	var px, py int
 
-	// Trophy icon click — checked before plant interaction so it doesn't bleed through.
+	touchPressed := inpututil.AppendJustPressedTouchIDs(nil)
+	touchActive := ebiten.AppendTouchIDs(nil)
+	touchReleased := inpututil.AppendJustReleasedTouchIDs(nil)
+
+	if len(touchPressed) > 0 {
+		g.activeTouchID = touchPressed[0]
+		px, py = ebiten.TouchPosition(g.activeTouchID)
+		g.lastTouchX, g.lastTouchY = px, py
+		pJustPressed, pIsHeld = true, true
+	} else if len(touchActive) > 0 {
+		for _, id := range touchActive {
+			if id == g.activeTouchID {
+				px, py = ebiten.TouchPosition(id)
+				g.lastTouchX, g.lastTouchY = px, py
+				pIsHeld = true
+				break
+			}
+		}
+	} else if len(touchReleased) > 0 {
+		px, py = g.lastTouchX, g.lastTouchY
+		pJustReleased = true
+		g.activeTouchID = -1
+	} else {
+		px, py = ebiten.CursorPosition()
+		pJustPressed = inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft)
+		pIsHeld = ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft)
+		pJustReleased = inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft)
+	}
+
+	// Trophy icon — checked first so it doesn't bleed into plant interaction.
 	trophyHandled := false
 	tx, ty := g.w-trophyIconW-2, trophyIconY
-	if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) &&
-		mx >= tx && mx < tx+trophyIconW && my >= ty && my < ty+trophyIconH {
+	if pJustPressed && px >= tx && px < tx+trophyIconW && py >= ty && py < ty+trophyIconH {
 		g.showAchievements = !g.showAchievements
 		g.holdPlant = nil
 		trophyHandled = true
@@ -302,8 +335,8 @@ func (g *Game) Update() error {
 
 	if !trophyHandled {
 		if g.picker.active {
-			g.picker.Update(mx, my)
-			if inpututil.IsMouseButtonJustReleased(ebiten.MouseButtonLeft) {
+			g.picker.Update(px, py)
+			if pJustReleased {
 				if typeName, ok := g.picker.HoveredType(); ok {
 					pt := g.plantTypes[typeName]
 					g.picker.plant.ChangeType(pt.randomFrames(), pt)
@@ -311,10 +344,10 @@ func (g *Game) Update() error {
 				g.picker.Close()
 			}
 		} else {
-			if inpututil.IsMouseButtonJustPressed(ebiten.MouseButtonLeft) {
+			if pJustPressed {
 				g.holdPlant = nil
 				for _, plant := range g.plants {
-					if plant.IsFullyGrown() && plant.ContainsGround(mx, my) {
+					if plant.IsFullyGrown() && plant.ContainsGround(px, py) {
 						g.holdPlant = plant
 						g.holdTicks = 0
 						break
@@ -322,7 +355,7 @@ func (g *Game) Update() error {
 				}
 			}
 			if g.holdPlant != nil {
-				if ebiten.IsMouseButtonPressed(ebiten.MouseButtonLeft) {
+				if pIsHeld {
 					g.holdTicks++
 					if g.holdTicks >= pickerLongClickTicks {
 						if g.pickerUnlocked {
@@ -332,7 +365,7 @@ func (g *Game) Update() error {
 						g.holdTicks = 0
 					}
 				} else {
-					// Released before threshold — quick click: randomise type.
+					// Released before threshold — quick tap: randomise type.
 					newTypeName := plantTypeNames[rand.Intn(len(plantTypeNames))]
 					newType := g.plantTypes[newTypeName]
 					g.holdPlant.ChangeType(newType.randomFrames(), newType)
