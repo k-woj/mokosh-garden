@@ -1,9 +1,9 @@
 # Mokosh Garden 🌿
 
-*A slop garden. An AI-assisted evening project.*
-
 A small idle garden game built with [Ebiten](https://ebitengine.org/) and Go.
 Tend a 3×3 plot of flowers, attract bees to your hive, and collect honey.
+
+▶ [Play in browser](https://k-woj.github.io/mokosh-garden/)
 
 ![Mokosh Garden](screenshot.png)
 
@@ -36,18 +36,20 @@ go run .
 
 Requires Go 1.20+ and a working C compiler (for Ebiten).
 
-## Web (GitHub Pages)
+## Web build
 
-> *Planned — coming soon.*
+Deployed automatically to [GitHub Pages](https://k-woj.github.io/mokosh-garden/) on every push to `trunk`.
 
-Build as WebAssembly and deploy to GitHub Pages via GitHub Actions.
+To build the WASM binary locally:
 
 ```bash
 GOOS=js GOARCH=wasm go build -o web/game.wasm .
+cp "$(go env GOROOT)/lib/wasm/wasm_exec.js" web/
+# then serve web/ with any static file server
 ```
 
 ## Credits
 
 Pixel art assets: generated with [Pixel Labs](https://pixel-labs.app).  
 Engine: [Ebiten v2](https://ebitengine.org/) by Hajime Hoshi.  
-Code: largely AI-assisted ([Claude](https://claude.ai)).
+Code: largely AI-assisted ([Claude](https://claude.ai), [GitHub Copilot](https://github.com/features/copilot)).

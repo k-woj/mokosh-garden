@@ -6,7 +6,7 @@ import (
 	"log"
 
 	"github.com/hajimehoshi/ebiten/v2"
-	"github.com/vistustan/mokosh-garden/game"
+	"github.com/k-woj/mokosh-garden/game"
 )
 
 func main() {

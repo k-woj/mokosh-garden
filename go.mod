@@ -1,4 +1,4 @@
-module github.com/vistustan/mokosh-garden
+module github.com/k-woj/mokosh-garden
 
 go 1.25.0
 
